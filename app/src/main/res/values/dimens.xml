@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="mainMargin">32dp</dimen>
+    <dimen name="twentyDp">20dp</dimen>
+    <dimen name="spacing">5dp</dimen>
+</resources>
