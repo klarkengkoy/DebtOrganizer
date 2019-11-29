@@ -31,7 +31,7 @@ class MainActivity : AppCompatActivity() {
 
     private val allPermissions = 1
 
-    var isOnDebtorsTabSelected: Boolean = true
+    private var isOnDebtorsTabSelected: Boolean = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,56 +45,26 @@ class MainActivity : AppCompatActivity() {
         val white = ContextCompat.getColor(this, R.color.white)
         val gray = ContextCompat.getColor(this, R.color.gray)
         val black = ContextCompat.getColor(this, R.color.black)
-        var file = File(getExternalFilesDir(null), "data.txt")
-        var totalAmountView = findViewById<TextView>(R.id.totalAmount)
-
-        if (file.exists()) {
-            var gson = Gson()
-            var jsonString: String = getValues()
-            var data = gson.fromJson(jsonString, Data::class.java)
-            var debtorArray: ArrayList<EntryDetails>? = data.debtor
-            var debtorCurrencyArray : ArrayList<String> = data.debtorCurrencies
-            val adapter = ArrayAdapter<String>(
-                this, android.R.layout.simple_spinner_item, debtorCurrencyArray
-            )
-            list.layoutManager = LinearLayoutManager(this)
-            list.adapter = ListAdapter(debtorArray, this)
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            val sItems = findViewById<Spinner>(R.id.currencySpinner)
-            sItems.adapter = adapter
-            sItems.onItemSelectedListener = object : OnItemSelectedListener {
-                override fun onItemSelected(
-                    parentView: AdapterView<*>,
-                    selectedItemView: View,
-                    position: Int,
-                    id: Long
-                ) {
-                    // your code here
-                    val selected = sItems.selectedItem.toString()
-                    if (selected == "what ever the option was") {
-                    }
-                }
-
-                override fun onNothingSelected(parentView: AdapterView<*>) {
-                    // your code here
-                }
-
-            }
-        }
-
+        val file = File(getExternalFilesDir(null), "data.txt")
+        val intent = Intent(this, AddNewActivity::class.java)
+        val debtorsTab = true
 
         creditorsButton?.setOnClickListener { changeTab() }
         creditorsButton?.setTextColor(white)
         creditorsButton?.setBackgroundColor(gray)
         debtorsButton?.setTextColor(black)
         addNewButton.setOnClickListener {
-            val intent = Intent(this, AddNewActivity::class.java)
+
             if (!debtorsButton?.isEnabled!!) {
                 intent.putExtra("debtorOrCreditor", "Add New Debtor")
             } else {
                 intent.putExtra("debtorOrCreditor", "Add New Creditor")
             }
             startActivity(intent)
+        }
+
+        if (file.exists()) {
+            initializeFile(debtorsTab)
         }
     }
 
@@ -116,24 +86,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun changeTab() {
-        var debtorsButton: Button? = findViewById(R.id.debtorsButton)
-        var creditorsButton: Button? = findViewById(R.id.creditorsButton)
-        var addNewButton: Button = findViewById(R.id.addNewButton)
-        var gson = Gson()
-        var jsonString: String = getValues()
-        var data = gson.fromJson(jsonString, Data::class.java)
-        var debtorArray : ArrayList<EntryDetails>? = data?.debtor
-        var creditorArray : ArrayList<EntryDetails>? = data?.creditor
+        val debtorsButton: Button? = findViewById(R.id.debtorsButton)
+        val creditorsButton: Button? = findViewById(R.id.creditorsButton)
+        val addNewButton: Button = findViewById(R.id.addNewButton)
+        val gson = Gson()
+        val jsonString: String = getValues()
+        val data = gson.fromJson(jsonString, Data::class.java)
+        val debtorArray: ArrayList<EntryDetails>? = data?.debtor
+        val creditorArray: ArrayList<EntryDetails>? = data?.creditor
+        var debtorCurrencyArray: ArrayList<String> = ArrayList()
+        var creditorCurrencyArray: ArrayList<String> = ArrayList()
         list.layoutManager = LinearLayoutManager(this)
 
+        if (data != null) {
+            debtorCurrencyArray = data.debtorCurrencies
+            creditorCurrencyArray = data.creditorCurrencies
 
-        var debtorCurrencyArray : ArrayList<String> = data.debtorCurrencies
-        var creditorCurrencyArray : ArrayList<String> = data.creditorCurrencies
+        }
 
-
-        var adapter: ArrayAdapter<String>
-
-
+        val adapter: ArrayAdapter<String>
 
         val white = ContextCompat.getColor(this, R.color.white)
         val gray = ContextCompat.getColor(this, R.color.gray)
@@ -143,30 +114,91 @@ class MainActivity : AppCompatActivity() {
         creditorsButton?.isEnabled = !creditorsButton?.isEnabled!!
         if (isOnDebtorsTabSelected) {
             adapter = ArrayAdapter(
-                    this, android.R.layout.simple_spinner_item, debtorCurrencyArray
+                this, android.R.layout.simple_spinner_item, debtorCurrencyArray.distinct()
             )
             creditorsButton.setTextColor(white)
             creditorsButton.setBackgroundColor(gray)
             debtorsButton.setTextColor(black)
             debtorsButton.setBackgroundColor(white)
-            addNewButton.text = "ADD NEW DEBTOR"
+            addNewButton.text = getString(R.string.addnewdebtor)
             list.adapter = ListAdapter(debtorArray, this)
             creditorsButton.setOnClickListener { changeTab() }
+            if (data != null) {
+                initializeFile(isOnDebtorsTabSelected)
+            }
+
         } else {
             adapter = ArrayAdapter(
-                this, android.R.layout.simple_spinner_item, creditorCurrencyArray
+                this, android.R.layout.simple_spinner_item, creditorCurrencyArray.distinct()
             )
             debtorsButton.setTextColor(white)
             debtorsButton.setBackgroundColor(gray)
             creditorsButton.setTextColor(black)
             creditorsButton.setBackgroundColor(white)
-            addNewButton.text = "ADD NEW CREDITOR"
+            addNewButton.text = getString(R.string.addnewcreditor)
             list.adapter = ListAdapter(creditorArray, this)
             debtorsButton.setOnClickListener { changeTab() }
+            if (data != null) {
+                initializeFile(isOnDebtorsTabSelected)
+            }
         }
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         val sItems = findViewById<Spinner>(R.id.currencySpinner)
         sItems.adapter = adapter
+        adapter.notifyDataSetChanged()
+    }
+
+    private fun initializeFile(debtorTab: Boolean) {
+
+        val totalAmountView = findViewById<TextView>(R.id.totalAmount)
+        val gson = Gson()
+        val jsonString: String = getValues()
+        val data = gson.fromJson(jsonString, Data::class.java)
+        val debtorArray: ArrayList<EntryDetails>? = data.debtor
+        val creditorArray: ArrayList<EntryDetails>? = data.creditor
+        val listArray: ArrayList<EntryDetails>? = when (debtorTab) {
+            true -> debtorArray
+            false -> creditorArray
+        }
+        val amountArray: ArrayList<Int> = ArrayList()
+        val debtorCurrencyArray: ArrayList<String> = data.debtorCurrencies
+        val creditorCurrencyArray: ArrayList<String> = data.creditorCurrencies
+        val currencyArray: ArrayList<String> = when (debtorTab) {
+            true -> debtorCurrencyArray
+            false -> creditorCurrencyArray
+        }
+
+        val adapter = ArrayAdapter<String>(
+            this, android.R.layout.simple_spinner_item, currencyArray.distinct()
+        )
+        val sItems = findViewById<Spinner>(R.id.currencySpinner)
+        list.layoutManager = LinearLayoutManager(this)
+        list.adapter = ListAdapter(listArray, this)
+        totalAmountView.text = ""
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        sItems.adapter = adapter
+        sItems.onItemSelectedListener = object : OnItemSelectedListener {
+            override fun onItemSelected(
+                parentView: AdapterView<*>,
+                selectedItemView: View?,
+                position: Int,
+                id: Long
+            ) {
+                val selected = sItems.selectedItem.toString()
+                amountArray.clear()
+                if (listArray != null) {
+                    for (debtorEntry in listArray) {
+                        if (debtorEntry.currency == selected) {
+                            amountArray.add(debtorEntry.amount.toInt())
+                        }
+                    }
+                }
+                totalAmountView.text = amountArray.sum().toString()
+            }
+
+            override fun onNothingSelected(parentView: AdapterView<*>) {
+            }
+        }
     }
 
 
